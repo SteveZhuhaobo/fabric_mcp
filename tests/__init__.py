@@ -1,0 +1,1 @@
+"""Test suite for Fabric Lakehouse MCP server."""

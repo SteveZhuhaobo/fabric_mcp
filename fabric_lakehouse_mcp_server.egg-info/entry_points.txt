@@ -1,0 +1,2 @@
+[console_scripts]
+fabric-lakehouse-mcp = fabric_lakehouse_mcp.main:main
