@@ -343,8 +343,8 @@ class QueryPaginator:
         if not query_upper.startswith("SELECT"):
             return query, 0, 0
         
-        # Check if query already has LIMIT/OFFSET
-        if "LIMIT" in query_upper or "OFFSET" in query_upper:
+        # Check if query already has LIMIT/OFFSET or TOP
+        if "LIMIT" in query_upper or "OFFSET" in query_upper or "TOP " in query_upper:
             # Query already has pagination, return as-is
             return query, 0, 0
         

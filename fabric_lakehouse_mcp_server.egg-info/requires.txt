@@ -9,6 +9,7 @@ structlog>=23.2.0
 click>=8.1.0
 httpx>=0.25.0
 tenacity>=8.2.0
+pyodbc>=5.0.0
 
 [dev]
 pytest>=7.4.0

@@ -49,6 +49,9 @@ logger = get_logger(__name__)
 # Global client instance (will be initialized by server)
 _fabric_client: Optional[FabricLakehouseClient] = None
 
+# Server readiness flag
+_server_ready: bool = False
+
 # Security components
 _sql_validator: Optional[SQLValidator] = None
 _complexity_analyzer: Optional[QueryComplexityAnalyzer] = None
@@ -58,7 +61,7 @@ _rate_limiter: Optional[RateLimiter] = None
 
 def initialize_client(client: FabricLakehouseClient, config: Optional[ServerConfig] = None) -> None:
     """Initialize the global Fabric client instance and security components."""
-    global _fabric_client, _sql_validator, _complexity_analyzer, _audit_logger, _rate_limiter
+    global _fabric_client, _sql_validator, _complexity_analyzer, _audit_logger, _rate_limiter, _server_ready
     
     _fabric_client = client
     
@@ -98,6 +101,13 @@ def initialize_client(client: FabricLakehouseClient, config: Optional[ServerConf
         _rate_limiter = get_rate_limiter()
     
     log_operation(logger, "mcp_tools_initialized")
+
+
+def mark_server_ready() -> None:
+    """Mark the server as ready to handle requests."""
+    global _server_ready
+    _server_ready = True
+    log_operation(logger, "server_marked_ready")
     
     # Log initialization in audit log
     _audit_logger.log_data_access(
@@ -110,7 +120,9 @@ def initialize_client(client: FabricLakehouseClient, config: Optional[ServerConf
 def get_client() -> FabricLakehouseClient:
     """Get the initialized Fabric client."""
     if _fabric_client is None:
-        raise RuntimeError("Fabric client not initialized. Call initialize_client() first.")
+        raise ToolError("Fabric client not initialized. Server is starting up, please try again in a moment.")
+    if not _server_ready:
+        raise ToolError("Server is still starting up, please try again in a moment.")
     return _fabric_client
 
 

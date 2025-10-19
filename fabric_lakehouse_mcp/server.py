@@ -20,7 +20,8 @@ from .errors import (
     log_operation,
     OperationLogger,
     ErrorHandler,
-    ErrorContext
+    ErrorContext,
+    ConnectionError
 )
 
 
@@ -97,11 +98,15 @@ class FabricLakehouseMCPServer:
                     query_config=query_config
                 )
                 
-                # Test connection
-                log_operation(logger, "testing_fabric_connection")
-                await asyncio.get_event_loop().run_in_executor(
-                    None, self.fabric_client.test_connection
-                )
+                # Skip connection test during startup to avoid async issues
+                # Connection will be tested when first tool is called
+                log_operation(logger, "skipping_connection_test_during_startup")
+                
+                # Ensure no connection test is performed during initialization
+                # The client is ready but won't be tested until first use
+                
+                # IMPORTANT: Do not call any methods on fabric_client during initialization
+                # This includes test_connection(), get_tables(), or any API calls
                 
                 # Initialize MCP tools with the client and config
                 log_operation(logger, "initializing_mcp_tools")
@@ -150,45 +155,45 @@ class FabricLakehouseMCPServer:
                 # Mark server as running
                 self._running = True
                 
+                # Mark server as ready to handle requests
+                from .tools.mcp_tools import mark_server_ready
+                mark_server_ready()
+                
                 # Start the FastMCP server using stdio transport
                 log_operation(logger, "starting_mcp_server")
-                async with stdio_server() as (read_stream, write_stream):
-                    # Create server task
-                    server_task = asyncio.create_task(
-                        app.run(
-                            read_stream,
-                            write_stream,
-                            app.create_initialization_options()
-                        )
+                
+                # Create server task
+                server_task = asyncio.create_task(
+                    app.run_stdio_async()
+                )
+                
+                # Create shutdown monitoring task
+                shutdown_task = asyncio.create_task(self._shutdown_event.wait())
+                
+                try:
+                    # Wait for either server completion or shutdown signal
+                    done, pending = await asyncio.wait(
+                        [server_task, shutdown_task],
+                        return_when=asyncio.FIRST_COMPLETED
                     )
                     
-                    # Create shutdown monitoring task
-                    shutdown_task = asyncio.create_task(self._shutdown_event.wait())
+                    # Cancel pending tasks
+                    for task in pending:
+                        task.cancel()
+                        try:
+                            await task
+                        except asyncio.CancelledError:
+                            pass
                     
-                    try:
-                        # Wait for either server completion or shutdown signal
-                        done, pending = await asyncio.wait(
-                            [server_task, shutdown_task],
-                            return_when=asyncio.FIRST_COMPLETED
-                        )
+                    # Check if server task completed with an exception
+                    if server_task in done:
+                        await server_task  # This will raise any exception
                         
-                        # Cancel pending tasks
-                        for task in pending:
-                            task.cancel()
-                            try:
-                                await task
-                            except asyncio.CancelledError:
-                                pass
-                        
-                        # Check if server task completed with an exception
-                        if server_task in done:
-                            await server_task  # This will raise any exception
-                            
-                    except asyncio.CancelledError:
-                        log_operation(logger, "server_cancelled")
-                        raise
-                    finally:
-                        self._running = False
+                except asyncio.CancelledError:
+                    log_operation(logger, "server_cancelled")
+                    raise
+                finally:
+                    self._running = False
                         
             except Exception as e:
                 self._running = False
@@ -262,7 +267,7 @@ class FabricLakehouseMCPServer:
         """Check if the server is currently running."""
         return self._running
     
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self, skip_connection_test: bool = False) -> Dict[str, Any]:
         """Perform a comprehensive health check of the server and its components."""
         import time
         from datetime import datetime
@@ -334,38 +339,43 @@ class FabricLakehouseMCPServer:
                 # Check Fabric client
                 fabric_start = time.time()
                 if self.fabric_client:
-                    try:
-                        # Test connection in executor to avoid blocking
-                        connection_result = await asyncio.get_event_loop().run_in_executor(
-                            None, self.fabric_client.test_connection
-                        )
-                        
-                        # Try to get a simple table list to test API access
-                        try:
-                            tables = await asyncio.get_event_loop().run_in_executor(
-                                None, self.fabric_client.get_tables
-                            )
-                            table_count = len(tables) if tables else 0
-                            
-                            health_status["components"]["fabric_client"] = {
-                                "status": "healthy",
-                                "connection_test": connection_result,
-                                "api_access": True,
-                                "table_count": table_count
-                            }
-                        except Exception as api_error:
-                            health_status["components"]["fabric_client"] = {
-                                "status": "degraded",
-                                "connection_test": connection_result,
-                                "api_access": False,
-                                "api_error": str(api_error)
-                            }
-                            
-                    except Exception as e:
+                    if skip_connection_test:
+                        # Skip connection test during startup
                         health_status["components"]["fabric_client"] = {
-                            "status": "unhealthy",
-                            "error": str(e)
+                            "status": "initialized",
+                            "connection_test": "skipped",
+                            "api_access": "not_tested",
+                            "note": "Connection test skipped during startup"
                         }
+                    else:
+                        try:
+                            # Test connection
+                            connection_result = self.fabric_client.test_connection()
+                            
+                            # Try to get a simple table list to test API access
+                            try:
+                                tables = self.fabric_client.get_tables()
+                                table_count = len(tables) if tables else 0
+                                
+                                health_status["components"]["fabric_client"] = {
+                                    "status": "healthy",
+                                    "connection_test": connection_result,
+                                    "api_access": True,
+                                    "table_count": table_count
+                                }
+                            except Exception as api_error:
+                                health_status["components"]["fabric_client"] = {
+                                    "status": "degraded",
+                                    "connection_test": connection_result,
+                                    "api_access": False,
+                                    "api_error": str(api_error)
+                                }
+                                
+                        except Exception as e:
+                            health_status["components"]["fabric_client"] = {
+                                "status": "unhealthy",
+                                "error": str(e)
+                            }
                 else:
                     health_status["components"]["fabric_client"] = {"status": "not_initialized"}
                 
@@ -459,7 +469,7 @@ class FabricLakehouseMCPServer:
                         "disk_percent": psutil.disk_usage('/').percent if sys.platform != 'win32' else None
                     },
                     "configuration": {},
-                    "health": await self.health_check()
+                    "health": await self.health_check(skip_connection_test=True)
                 }
                 
                 # Add configuration summary (without sensitive data)

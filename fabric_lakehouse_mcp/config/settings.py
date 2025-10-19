@@ -34,7 +34,7 @@ class ServerConfig:
     
     # Query execution settings
     default_page_size: int = 1000
-    enable_pagination: bool = True
+    enable_pagination: bool = False  # Disabled due to SQL Server syntax conflicts
     enable_query_cancellation: bool = True
     result_format: str = "structured"  # structured, table, csv, json
     include_result_metadata: bool = True
@@ -74,7 +74,7 @@ class ServerConfig:
             raise ConfigurationError("FABRIC_WORKSPACE_ID environment variable is required", config_key="FABRIC_WORKSPACE_ID", context=context)
         if not lakehouse_id:
             context = ErrorContext(operation="load_config", additional_data={"config_key": "FABRIC_LAKEHOUSE_ID"})
-            raise ConfigurationError("FABRIC_LAKEHOUSE_ID environment variable is required", config_key="FABRIC_LAKEHOUSE_ID", context=context)
+            raise ConfigurationError("FABRIC_LAKEHOUSE_ID environment variable is required (use the actual Lakehouse ID, not SQL endpoint ID)", config_key="FABRIC_LAKEHOUSE_ID", context=context)
         if not tenant_id:
             context = ErrorContext(operation="load_config", additional_data={"config_key": "FABRIC_TENANT_ID"})
             raise ConfigurationError("FABRIC_TENANT_ID environment variable is required", config_key="FABRIC_TENANT_ID", context=context)
@@ -138,10 +138,10 @@ class ServerConfig:
             context = ErrorContext(operation="validate_config", additional_data={"config_key": "max_result_rows"})
             raise ConfigurationError("max_result_rows must be positive", config_key="max_result_rows", context=context)
         
-        if self.auth_method not in ["service_principal", "managed_identity", "interactive"]:
+        if self.auth_method not in ["service_principal", "managed_identity", "interactive", "default"]:
             context = ErrorContext(operation="validate_config", additional_data={"config_key": "auth_method", "value": self.auth_method})
             raise ConfigurationError(
-                "auth_method must be one of: service_principal, managed_identity, interactive",
+                "auth_method must be one of: service_principal, managed_identity, interactive, default",
                 config_key="auth_method",
                 context=context
             )

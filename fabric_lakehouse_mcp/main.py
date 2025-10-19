@@ -50,7 +50,7 @@ from fabric_lakehouse_mcp.errors import (
     "--auth-method",
     envvar="FABRIC_AUTH_METHOD",
     default="service_principal",
-    type=click.Choice(["service_principal", "managed_identity", "interactive"]),
+    type=click.Choice(["service_principal", "managed_identity", "interactive", "default"]),
     help="Authentication method to use",
 )
 @click.option(

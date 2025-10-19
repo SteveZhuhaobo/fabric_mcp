@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hamilton Traffic Signals Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        .legend {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-size: 14px;
+        }
+        .legend-item {
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 2px solid #333;
+        }
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div class="info-panel">
+        <h3>🚦 Hamilton Traffic Signals</h3>
+        <p><strong>Total Sites:</strong> 126</p>
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #e74c3c;"></div>
+                <span>Signalised Intersection (62)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #3498db;"></div>
+                <span>Pedestrian Crossing (51)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #f39c12;"></div>
+                <span>State Highway Intersection (13)</span>
+            </div>
+        </div>
+        <p><small>Click on markers for details</small></p>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map centered on Hamilton, New Zealand
+        const map = L.map('map').setView([-37.7870, 175.2793], 12);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Define colors for different site types
+        const siteTypeColors = {
+            'Signalised Intersection': '#e74c3c',
+            'Signalised Pedestrian Crossing': '#3498db',
+            'State Highway Signalised Intersection': '#f39c12'
+        };
+
+        // Traffic signal data from your Fabric Lakehouse
+        const trafficSignals = [
+            [2, "Signalised Intersection", "Hall St", "Kent St", " ", -37.78709408, 175.2632632],
+            [3, "Signalised Intersection", "Hall St", "Lake Rd", " ", -37.78585423, 175.2646939],
+            [4, "Signalised Intersection", "Norton Rd", "Hall St", "Mill St", -37.78454528, 175.2668943],
+            [5, "Signalised Intersection", "Commerce St", "Norton Rd", "Mill Ln", -37.78481816, 175.2686965],
+            [6, "Signalised Intersection", "Ulster St", "Forest Lake Road", "Victoria St", -37.76930254, 175.2624962],
+            [8, "Signalised Intersection", "Anglesea St", "Thackeray St", "Hood St", -37.79142291, 175.2834134],
+            [9, "Signalised Intersection", "Anglesea St", "Collingwood St", " ", -37.78958881, 175.2816999],
+            [10, "Signalised Intersection", "Anglesea St", "Ward St", " ", -37.7872312, 175.2794584],
+            [11, "Signalised Intersection", "Anglesea St", "Bryce St", " ", -37.78627188, 175.278629],
+            [12, "Signalised Intersection", "Anglesea St", "London St", " ", -37.78453434, 175.2770872],
+            [13, "Signalised Intersection", "Anglesea St", "Rostrevor St", " ", -37.78276991, 175.2754601],
+            [14, "Signalised Intersection", "Avalon Dr", "Ellicott Rd", "Forest Lake Rd", -37.78056647, 175.2493656],
+            [15, "Signalised Intersection", "Fairfield Br", "Victoria St", " ", -37.77245978, 175.2692516],
+            [16, "Signalised Intersection", "Mill St", "Willoughby St", " ", -37.78045654, 175.2718106],
+            [17, "Signalised Intersection", "Mill St", "Ulster St", " ", -37.77843846, 175.2729254],
+            [18, "Signalised Intersection", "Mill St", "Victoria St", "Boundary Rd", -37.77755882, 175.2744009],
+            [20, "Signalised Intersection", "Claudelands Rd", "Grey St", " ", -37.78168621, 175.2888857],
+            [21, "Signalised Intersection", "Heaphy Tce", "Brooklyn Rd", "O'Neill St", -37.78082006, 175.2883063],
+            [23, "Signalised Intersection", "Grey St", "Bridge St", " ", -37.79047544, 175.2922485],
+            [24, "Signalised Intersection", "Clyde St", "Grey St", " ", -37.79155856, 175.2926544],
+            [25, "Signalised Intersection", "Victoria St", "Bryce St", " ", -37.78499995, 175.2809003],
+            [26, "Signalised Intersection", "Victoria St", "Claudelands Rd", " ", -37.78543044, 175.281357],
+            [27, "Signalised Intersection", "Victoria St", "Collingwood St", " ", -37.78826041, 175.2839113],
+            [28, "Signalised Intersection", "Victoria St", "Hood St", " ", -37.79004757, 175.2856264],
+            [29, "Signalised Intersection", "Victoria St", "Bridge St", "Tisdall St", -37.79245126, 175.2879669],
+            [30, "Signalised Intersection", "Victoria St", "London St", " ", -37.78323369, 175.279333],
+            [31, "Signalised Intersection", "Peachgrove Rd", "Te Aroha St", "Ruakura Rd", -37.78019731, 175.2984787],
+            [32, "Signalised Intersection", "Tristram St", "Ward St", " ", -37.78847199, 175.2772843],
+            [33, "Signalised Intersection", "Norton Rd", "London St", "Tristram St", -37.78577675, 175.2748272],
+            [34, "Signalised Intersection", "Tristram St", "Mill St", "Willoughby St", -37.78148657, 175.2711323],
+            [35, "Signalised Intersection", "Victoria St", "Ulster St", "Liverpool St", -37.77967812, 175.2760465],
+            [36, "Signalised Intersection", "Naylor St", "Galloway St", " ", -37.79784764, 175.3037784],
+            [37, "Signalised Intersection", "Peachgrove Rd", "Clyde St", "Galloway St", -37.7900027, 175.2997284],
+            [39, "Signalised Intersection", "Pembroke St", "Selwyn St", "Lake Cres", -37.80345317, 175.2810081],
+            [40, "Signalised Intersection", "Tristram St", "Bryce St", " ", -37.78755161, 175.2764561],
+            [43, "Signalised Intersection", "Te Rapa Rd", "Home Straight", " ", -37.76265968, 175.2509747],
+            [44, "Signalised Intersection", "Te Rapa Rd", "Garnett Ave", "Vardon Rd", -37.76474096, 175.2532398],
+            [46, "Signalised Intersection", "Te Rapa Rd", "Pukete Rd", "Manchester Pl", -37.75196473, 175.2401206],
+            [55, "Signalised Intersection", "Church Rd", "Maui St", " ", -37.74204546, 175.2300417],
+            [61, "Signalised Intersection", "Anglesea St", "Carpark", null, -37.78788295, 175.2800761],
+            [62, "Signalised Intersection", "River Rd", "Metering", " ", -37.7712292, 175.2712763],
+            [64, "Signalised Intersection", "Wairere Dr", "Pukete Rd", " ", -37.74778778, 175.2404446],
+            [65, "Signalised Intersection", "Avalon Dr", "Gilchrist", "Avalon Dr", -37.75547919, 175.2286404],
+            [68, "Signalised Intersection", "Wairere Dr", "Powells Rd", " ", -37.76614518, 175.3007673],
+            [69, "Signalised Intersection", "Wairere Dr", "East St", " ", -37.77582793, 175.3028423],
+            [70, "Signalised Intersection", "Wairere Dr", "River Rd", " ", -37.74187545, 175.255958],
+            [71, "Signalised Intersection", "Wairere Dr", "Ruakura Rd", " ", -37.78088291, 175.3030102],
+            [78, "Signalised Intersection", "Wairere Dr", "Clyde St", " ", -37.79010237, 175.3053889],
+            [80, "Signalised Intersection", "Wairere Dr", "Cambridge", "Naylor St", -37.79738979, 175.3081397],
+            [92, "Signalised Intersection", "Kahikatea Dr", "Quentin", "Gallagher", -37.80747333, 175.2686498],
+            [103, "Signalised Intersection", "Borman", "Moonlight", " ", -37.72236988, 175.2655169],
+            [105, "Signalised Intersection", "Borman Rd", "Supermarket Rd", null, -37.72297709, 175.2584557],
+            [107, "Signalised Intersection", "Pardoa Blvd", "Spine Rd", null, -37.74931632, 175.3002716],
+            [111, "Signalised Intersection", "Gordonton Rd", "Thomas Rd", null, -37.73218806, 175.2871808],
+            [117, "Signalised Intersection", "Ruakura Rd", "Ruakura Lane", null, -37.78045951, 175.311212],
+            [118, "Signalised Intersection", "Ruakura Rd", "Knighton Rd", null, -37.78166649, 175.3156166],
+            [119, "Signalised Intersection", "Ruakura Rd", "Silverdale", null, -37.78226439, 175.3214976],
+            [120, "Signalised Intersection", "Pokeno Rd", "Helensee Rd", null, -37.24333817, 175.0165301],
+            [121, "Signalised Intersection", "Pokeno Rd", "Hitchen Rd", null, -37.24362731, 175.0181359],
+            [123, "Signalised Intersection", "Wairere Dr", "Cobham Dr", "Interchange", -37.80156865, 175.3097538],
+            [128, "Signalised Intersection", "Ruakura Rd", "Harakeke Rd", null, -37.78000047, 175.3299247],
+            [129, "Signalised Intersection", "Ruakura Rd", "Spine Rd", null, -37.78046, 175.320099],
+            [7, "Signalised Pedestrian Crossing", "Victoria St", "Ped xing", " ", -37.78586785, 175.2816816],
+            [45, "Signalised Pedestrian Crossing", "Clyde St", "Ped xing", " ", -37.7910256, 175.2949647],
+            [47, "Signalised Pedestrian Crossing", "Pukete Rd", "Ped xing", " ", -37.74473497, 175.2401112],
+            [48, "Signalised Pedestrian Crossing", "Hukanui Rd", "Ped xing (north)", " ", -37.74849568, 175.2782532],
+            [49, "Signalised Pedestrian Crossing", "Peachgrove Rd", "Ped xing", " ", -37.78439451, 175.2981861],
+            [51, "Signalised Pedestrian Crossing", "Hukanui Rd", "Ped xing (south)", " ", -37.76122476, 175.2870932],
+            [52, "Signalised Pedestrian Crossing", "Silverdale Rd", null, null, -37.78996063, 175.3258204],
+            [53, "Signalised Pedestrian Crossing", "School access rd", "Ped xing", " ", -37.71995452, 175.2670731],
+            [57, "Signalised Pedestrian Crossing", "Clarkin Rd", "Ped xing (east)", " ", -37.76369908, 175.2845302],
+            [58, "Signalised Pedestrian Crossing", "Forest Lake Rd", "Ped xing", " ", -37.77543223, 175.2546718],
+            [59, "Signalised Pedestrian Crossing", "Grey St", "Ped xing (north)", " ", -37.78803675, 175.2914242],
+            [67, "Signalised Pedestrian Crossing", "Grey St", "Ped xing (south)", " ", -37.79305843, 175.2934126],
+            [73, "Signalised Pedestrian Crossing", "Uster St", "Ped xing", " ", -37.77919468, 175.2751358],
+            [74, "Signalised Pedestrian Crossing", "Ruakura Rd", "Ped xing", " ", -37.7804443, 175.3002936],
+            [75, "Signalised Pedestrian Crossing", "Pembroke St", "ped xing", " ", -37.79860528, 175.2812293],
+            [77, "Signalised Pedestrian Crossing", "Wairere Dr", "Ped Xing", "Near Old Farm Rd", -37.78716223, 175.3043742],
+            [79, "Signalised Pedestrian Crossing", "Wairere Dr", "Ped Xing", "Near Henry St", -37.79489311, 175.3073696],
+            [81, "Signalised Pedestrian Crossing", "Fifth Ave", "Ped xing", " ", -37.77203274, 175.2943778],
+            [82, "Signalised Pedestrian Crossing", "Clarkin Rd", "Ped xing (west)", " ", -37.76603801, 175.2735737],
+            [83, "Signalised Pedestrian Crossing", "Maeroa Rd", "Ped xing", " ", -37.77820062, 175.2590574],
+            [84, "Signalised Pedestrian Crossing", "Thomas Rd", "Ped xing", " ", -37.73080975, 175.2771067],
+            [85, "Signalised Pedestrian Crossing", "Discovery Dr", "Ped xing", " ", -37.72872348, 175.2521924],
+            [86, "Signalised Pedestrian Crossing", "Pembroke St", "Ped xing", "Outside Hospital", -37.8050097, 175.2811351],
+            [87, "Signalised Pedestrian Crossing", "Whatawhata Rd", "Ped xing", " ", -37.79502194, 175.2465662],
+            [88, "Signalised Pedestrian Crossing", "Massey St", "Ped xing", " ", -37.7934712, 175.2499037],
+            [89, "Signalised Pedestrian Crossing", "Morrinsville Rd", "Ped xing", " ", -37.80000979, 175.3256007],
+            [93, "Signalised Pedestrian Crossing", "Rototuna school", "Ped xing", " ", -37.71662132, 175.2635046],
+            [95, "Signalised Pedestrian Crossing", "Lake Rd", "Ped xing", null, -37.78929407, 175.2693723],
+            [96, "Signalised Pedestrian Crossing", "Horsham Downs Rd", "Ped xing", " ", -37.73167914, 175.2736778],
+            [97, "Signalised Pedestrian Crossing", "Ohaupo Rd", "Ped xing (north)", " ", -37.81105334, 175.2816976],
+            [98, "Signalised Pedestrian Crossing", "Normandy Ave", "Ped xing", " ", -37.81125377, 175.2827325],
+            [99, "Signalised Pedestrian Crossing", "Killarney Rd", "Ped xing", " ", -37.79479908, 175.2661144],
+            [100, "Signalised Pedestrian Crossing", "Seddon Rd", "Ped xing", " ", -37.78838262, 175.2743155],
+            [101, "Signalised Pedestrian Crossing", "Ohaupo Rd", "Ped xing (south)", " ", -37.82229225, 175.2877938],
+            [102, "Signalised Pedestrian Crossing", "Borman Rd", "Ped xing (east)", " ", -37.72263797, 175.2625864],
+            [104, "Signalised Pedestrian Crossing", "Victoria St", "Ped xing", "(Cambridge)", -37.88516339, 175.4647053],
+            [106, "Signalised Pedestrian Crossing", "Anglesea St", "Ped xing", null, -37.792661, 175.284559],
+            [108, "Signalised Pedestrian Crossing", "Masters Ave", " ", " ", -37.79389926, 175.3253308],
+            [109, "Signalised Pedestrian Crossing", "Victoria St", " ", " ", -37.77025859, 175.2644797],
+            [110, "Signalised Pedestrian Crossing", "River Rd", " ", " ", -37.73859944, 175.2523486],
+            [112, "Signalised Pedestrian Crossing", "Collins Rd", null, null, -37.81854224, 175.2747471],
+            [113, "Signalised Pedestrian Crossing", "Rifle Range Rd", "Ped xing", " ", -37.79261078, 175.2488789],
+            [114, "Signalised Pedestrian Crossing", "River Rd", "Ped xing", "(By O'Neil)", -37.78257117, 175.2843949],
+            [115, "Signalised Pedestrian Crossing", "Anglesea St", "Ped xing", "(By Liverpool)", -37.78119431, 175.2738532],
+            [116, "Signalised Pedestrian Crossing", "Hamilton Rd", "Ped xing", "(Cambridge)", -37.88947914, 175.4617277],
+            [122, "Signalised Pedestrian Crossing", "Pokeno Rd", "Ped xing", null, -37.24377892, 175.0149604],
+            [126, "Signalised Pedestrian Crossing", "Boundary Rd", "Ped Xing", null, -37.7758673, 175.2796054],
+            [127, "Signalised Pedestrian Crossing", "Ohaupo Rd", "Ped Xing", "(Ohaupo)", -37.918731, 175.306819],
+            [130, "Signalised Pedestrian Crossing", "Cambridge Rd", "Ped Xing", "(Cambridge)", -37.889576, 175.452215],
+            [138, "Signalised Pedestrian Crossing", "Pembroke St", "Ped Xing", null, -37.795745, 175.280747],
+            [147, "Signalised Pedestrian Crossing", "Hukanui Rd", "Ped Xing", null, -37.739238, 175.273847],
+            [1, "State Highway Signalised Intersection", "Massey St", "Greenwood St", "Lincoln St", -37.78880992, 175.2597703],
+            [19, "State Highway Signalised Intersection", "Ohaupo Rd", "Kahikatea Rd", "Lorne St", -37.80793189, 175.2803893],
+            [22, "State Highway Signalised Intersection", "Ohaupo Rd", "Collins Rd", " ", -37.8173865, 175.2822276],
+            [38, "State Highway Signalised Intersection", "Te Rapa Rd", "Avalon Dr", "Wairere Dr", -37.74983527, 175.2369941],
+            [41, "State Highway Signalised Intersection", "Lorne St", "Normandy Ave", " ", -37.80718564, 175.2861565],
+            [42, "State Highway Signalised Intersection", "Cobham Dr", "Normandy Ave", " ", -37.80381735, 175.2884095],
+            [56, "State Highway Signalised Intersection", "Greenwood St", "Killarney Rd", " ", -37.79472272, 175.260649],
+            [60, "State Highway Signalised Intersection", "Avalon Dr", "Foreman Rd", " ", -37.76179087, 175.2341076],
+            [63, "State Highway Signalised Intersection", "Normandy Ave", "Bader St", " ", -37.80830446, 175.2863495],
+            [66, "State Highway Signalised Intersection", "Te Rapa Rd", "Ruffell Rd", " ", -37.72969653, 175.2196515],
+            [72, "State Highway Signalised Intersection", "Te Rapa Rd", "Eagle Way", "The Base", -37.74648096, 175.2329306],
+            [124, "State Highway Signalised Intersection", "Cobham Dr", "Cambridge Dr", null, -37.800854, 175.31921]
+        ];
+
+        // Add markers to the map
+        trafficSignals.forEach(signal => {
+            const [siteNumber, siteType, road1, road2, road3, lat, lng] = signal;
+            
+            // Create popup content
+            let popupContent = `
+                <div style="font-family: Arial, sans-serif;">
+                    <h4 style="margin: 0 0 10px 0; color: #333;">🚦 Site #${siteNumber}</h4>
+                    <p style="margin: 5px 0;"><strong>Type:</strong> ${siteType}</p>
+                    <p style="margin: 5px 0;"><strong>Location:</strong> ${road1}`;
+            
+            if (road2 && road2.trim() && road2 !== 'null') {
+                popupContent += ` & ${road2}`;
+            }
+            if (road3 && road3.trim() && road3 !== 'null' && road3 !== ' ') {
+                popupContent += ` & ${road3}`;
+            }
+            
+            popupContent += `</p>
+                    <p style="margin: 5px 0; font-size: 12px; color: #666;">
+                        <strong>Coordinates:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}
+                    </p>
+                </div>
+            `;
+
+            // Create marker with appropriate color
+            const marker = L.circleMarker([lat, lng], {
+                radius: 6,
+                fillColor: siteTypeColors[siteType],
+                color: '#333',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).addTo(map);
+
+            marker.bindPopup(popupContent);
+        });
+
+        // Add a scale control
+        L.control.scale().addTo(map);
+
+        console.log(`🚦 Loaded ${trafficSignals.length} traffic signal locations on the map!`);
+    </script>
+</body>
+</html>

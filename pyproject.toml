@@ -7,7 +7,7 @@ name = "fabric-lakehouse-mcp-server"
 version = "0.1.0"
 description = "Model Context Protocol server for Microsoft Fabric Lakehouse integration"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
     {name = "Fabric Lakehouse MCP Team"}
@@ -18,8 +18,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
+
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -37,6 +36,7 @@ dependencies = [
     "click>=8.1.0",
     "httpx>=0.25.0",
     "tenacity>=8.2.0",
+    "pyodbc>=5.0.0",
 ]
 
 [project.optional-dependencies]
@@ -64,7 +64,7 @@ include = ["fabric_lakehouse_mcp*"]
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py310']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -87,7 +87,7 @@ line_length = 88
 known_first_party = ["fabric_lakehouse_mcp"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
