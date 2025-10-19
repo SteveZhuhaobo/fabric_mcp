@@ -13,7 +13,6 @@ from fabric_lakehouse_mcp.models import (
     TableInfo,
     TableSchema,
     ColumnInfo,
-    TableDefinition,
     ColumnDefinition,
     QueryResult,
     TableType,
@@ -249,52 +248,7 @@ class TestFabricLakehouseClient:
         with pytest.raises(ToolError):
             fabric_client.get_table_schema("nonexistent")
     
-    @patch('fabric_lakehouse_mcp.client.fabric_client.FabricLakehouseClient.execute_sql')
-    def test_create_table_success(self, mock_execute_sql, fabric_client):
-        """Test successful table creation."""
-        table_def = TableDefinition(
-            name="test_table",
-            columns=[
-                ColumnDefinition(name="id", data_type="int", nullable=False),
-                ColumnDefinition(name="name", data_type="varchar(100)", nullable=True),
-            ],
-            schema_name="dbo"
-        )
-        
-        # Mock successful execution
-        mock_result = QueryResult(
-            columns=[],
-            rows=[],
-            row_count=0,
-            execution_time_ms=100,
-            query_type=QueryType.CREATE
-        )
-        mock_execute_sql.return_value = mock_result
-        
-        result = fabric_client.create_table(table_def)
-        
-        assert result == True
-        mock_execute_sql.assert_called_once()
-        
-        # Verify the SQL contains expected elements
-        call_args = mock_execute_sql.call_args[0][0]
-        assert "CREATE TABLE dbo.test_table" in call_args
-        assert "id int NOT NULL" in call_args
-        assert "name varchar(100) NULL" in call_args
-        assert "USING DELTA" in call_args
-    
-    @patch('fabric_lakehouse_mcp.client.fabric_client.FabricLakehouseClient.execute_sql')
-    def test_create_table_failure(self, mock_execute_sql, fabric_client):
-        """Test table creation failure."""
-        table_def = TableDefinition(
-            name="test_table",
-            columns=[ColumnDefinition(name="id", data_type="int")],
-        )
-        
-        mock_execute_sql.side_effect = Exception("Table already exists")
-        
-        with pytest.raises(ExecutionError):
-            fabric_client.create_table(table_def)
+
     
     @patch('fabric_lakehouse_mcp.client.fabric_client.FabricLakehouseClient._make_request')
     @patch('fabric_lakehouse_mcp.client.fabric_client.time.time')

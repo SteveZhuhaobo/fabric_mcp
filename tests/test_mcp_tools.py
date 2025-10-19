@@ -13,7 +13,6 @@ from fabric_lakehouse_mcp.tools.mcp_tools import (
     initialize_client,
     list_tables,
     describe_table,
-    create_table,
     execute_query,
 )
 from fabric_lakehouse_mcp.client.fabric_client import FabricLakehouseClient
@@ -264,102 +263,6 @@ class TestDescribeTable(TestMCPToolsIntegration):
         assert exc_info.value.args[2]["error_type"] == "validation"
 
 
-class TestCreateTable(TestMCPToolsIntegration):
-    """Test create_table tool."""
-    
-    def test_create_table_success(self, mock_fabric_client):
-        """Test successful table creation."""
-        # Setup mock
-        mock_fabric_client.create_table.return_value = True
-        initialize_client(mock_fabric_client)
-        
-        # Define table columns
-        columns = [
-            {
-                "name": "id",
-                "data_type": "BIGINT",
-                "nullable": False,
-                "description": "Primary key"
-            },
-            {
-                "name": "name",
-                "data_type": "VARCHAR(255)",
-                "nullable": False,
-                "description": "Product name"
-            },
-            {
-                "name": "price",
-                "data_type": "DECIMAL(10,2)",
-                "nullable": True
-            }
-        ]
-        
-        # Execute tool
-        result = create_table(
-            table_name="products",
-            columns=columns,
-            schema_name="inventory",
-            format="DELTA",
-            description="Product catalog"
-        )
-        
-        # Verify results
-        assert isinstance(result, dict)
-        assert result["success"] is True
-        assert result["table_name"] == "products"
-        assert result["schema_name"] == "inventory"
-        assert result["format"] == "DELTA"
-        assert result["column_count"] == 3
-        assert result["description"] == "Product catalog"
-        assert "created successfully" in result["message"]
-        
-        # Verify client was called with correct parameters
-        mock_fabric_client.create_table.assert_called_once()
-        call_args = mock_fabric_client.create_table.call_args[0][0]
-        assert call_args.name == "products"
-        assert call_args.schema_name == "inventory"
-        assert len(call_args.columns) == 3
-    
-    def test_create_table_empty_name(self, mock_fabric_client):
-        """Test create_table with empty table name."""
-        initialize_client(mock_fabric_client)
-        
-        with pytest.raises(ToolError) as exc_info:
-            create_table("", [{"name": "id", "data_type": "INT"}])
-        
-        assert exc_info.value.args[0] == "INVALID_PARAMS"
-        assert "Table name cannot be empty" in exc_info.value.args[1]
-    
-    def test_create_table_no_columns(self, mock_fabric_client):
-        """Test create_table with no columns."""
-        initialize_client(mock_fabric_client)
-        
-        with pytest.raises(ToolError) as exc_info:
-            create_table("test_table", [])
-        
-        assert exc_info.value.args[0] == "INVALID_PARAMS"
-        assert "Table must have at least one column" in exc_info.value.args[1]
-    
-    def test_create_table_invalid_column_format(self, mock_fabric_client):
-        """Test create_table with invalid column format."""
-        initialize_client(mock_fabric_client)
-        
-        with pytest.raises(ToolError) as exc_info:
-            create_table("test_table", ["invalid_column"])
-        
-        assert exc_info.value.args[0] == "INVALID_PARAMS"
-        assert "Column 1 must be a dictionary" in exc_info.value.args[1]
-    
-    def test_create_table_missing_column_fields(self, mock_fabric_client):
-        """Test create_table with missing required column fields."""
-        initialize_client(mock_fabric_client)
-        
-        with pytest.raises(ToolError) as exc_info:
-            create_table("test_table", [{"name": "id"}])  # Missing data_type
-        
-        assert exc_info.value.args[0] == "INVALID_PARAMS"
-        assert "must have 'name' and 'data_type' fields" in exc_info.value.args[1]
-
 
 class TestExecuteQuery(TestMCPToolsIntegration):
     """Test execute_query tool."""
@@ -521,7 +424,6 @@ class TestMCPProtocolCompliance(TestMCPToolsIntegration):
         # Setup mocks
         mock_fabric_client.get_tables.return_value = sample_tables
         mock_fabric_client.get_table_schema.return_value = sample_table_schema
-        mock_fabric_client.create_table.return_value = True
         mock_fabric_client.execute_sql.return_value = sample_query_result
         initialize_client(mock_fabric_client)
         

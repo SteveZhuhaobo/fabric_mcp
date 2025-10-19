@@ -34,7 +34,7 @@
 
 - [x] 4. Define data models and validation
   - Create dataclasses for TableInfo, TableSchema, and QueryResult
-  - Implement TableDefinition and ColumnDefinition for table creation
+  - ~~Implement TableDefinition and ColumnDefinition for table creation~~ (Removed - SQL endpoints are read-only)
   - Add validation logic for table definitions and SQL queries
   - Create error response models following MCP format
   - _Requirements: 2.2, 3.2, 4.3, 6.1_

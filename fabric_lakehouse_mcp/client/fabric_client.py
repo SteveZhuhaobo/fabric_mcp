@@ -16,7 +16,6 @@ from ..models import (
     TableSchema,
     ColumnInfo,
     IndexInfo,
-    TableDefinition,
     QueryResult,
     TableType,
     QueryType,
@@ -488,54 +487,7 @@ class FabricLakehouseClient:
         with OperationLogger(logger, "execute_sql", query_preview=query[:100] + "..."):
             return self.sql_endpoint_client.execute_sql(query)
     
-    @handle_fabric_error(operation="create_table")
-    def create_table(self, table_definition: TableDefinition) -> bool:
-        """
-        Create a new table in the Lakehouse.
-        
-        Args:
-            table_definition: Definition of the table to create
-            
-        Returns:
-            True if table was created successfully
-            
-        Raises:
-            Various FabricMCPError subclasses: If table creation fails
-        """
-        with OperationLogger(
-            logger, 
-            "create_table", 
-            table_name=table_definition.name,
-            column_count=len(table_definition.columns)
-        ):
-            # Build CREATE TABLE SQL statement
-            columns_sql = []
-            for col in table_definition.columns:
-                nullable = "NULL" if col.nullable else "NOT NULL"
-                columns_sql.append(f"{col.name} {col.data_type} {nullable}")
-            
-            create_sql = f"""
-            CREATE TABLE {table_definition.schema_name}.{table_definition.name} (
-                {', '.join(columns_sql)}
-            )
-            """
-            
-            if table_definition.format.upper() == "DELTA":
-                create_sql += " USING DELTA"
-            
-            if table_definition.location:
-                create_sql += f" LOCATION '{table_definition.location}'"
-            
-            log_operation(
-                logger, 
-                "executing_create_table_sql", 
-                table_name=table_definition.name,
-                level="debug"
-            )
-            
-            result = self.execute_sql(create_sql)
-            log_operation(logger, "table_created_successfully", table_name=table_definition.name)
-            return True
+
     
     @handle_fabric_error(operation="execute_sql")
     def execute_sql(

@@ -76,15 +76,6 @@ class ColumnDefinition:
     description: Optional[str] = None
 
 
-@dataclass
-class TableDefinition:
-    """Definition for creating a new table."""
-    name: str
-    columns: List[ColumnDefinition]
-    schema_name: str = "dbo"
-    location: Optional[str] = None  # For external tables
-    format: str = "DELTA"  # Default to Delta format
-    description: Optional[str] = None
 
 
 @dataclass
@@ -246,40 +237,6 @@ def validate_data_type(data_type: str) -> None:
         raise ValidationError(f"Unsupported data type: {data_type}")
 
 
-def validate_table_definition(table_def: TableDefinition) -> None:
-    """Validate a complete table definition."""
-    # Validate table name
-    validate_table_name(table_def.name)
-    
-    # Validate schema name
-    if table_def.schema_name:
-        validate_table_name(table_def.schema_name)  # Same rules as table name
-    
-    # Validate columns
-    if not table_def.columns:
-        raise ValidationError("Table must have at least one column")
-    
-    if len(table_def.columns) > 1024:
-        raise ValidationError("Table cannot have more than 1024 columns")
-    
-    column_names = set()
-    for i, column in enumerate(table_def.columns):
-        try:
-            validate_column_name(column.name)
-            validate_data_type(column.data_type)
-            
-            # Check for duplicate column names
-            if column.name.lower() in column_names:
-                raise ValidationError(f"Duplicate column name: {column.name}")
-            column_names.add(column.name.lower())
-            
-        except ValidationError as e:
-            raise ValidationError(f"Column {i+1} ({column.name}): {e.message}")
-    
-    # Validate format
-    valid_formats = {'DELTA', 'PARQUET', 'CSV', 'JSON'}
-    if table_def.format.upper() not in valid_formats:
-        raise ValidationError(f"Unsupported table format: {table_def.format}")
 
 
 def validate_sql_query(query: str) -> QueryType:

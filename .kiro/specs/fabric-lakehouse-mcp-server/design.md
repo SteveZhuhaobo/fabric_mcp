@@ -70,7 +70,6 @@ class FabricLakehouseClient:
     def __init__(self, workspace_id: str, lakehouse_id: str, credentials: TokenCredential)
     def get_tables(self) -> List[TableInfo]
     def get_table_schema(self, table_name: str) -> TableSchema
-    def create_table(self, table_definition: TableDefinition) -> bool
     def execute_sql(self, query: str) -> QueryResult
 ```
 
@@ -131,22 +130,7 @@ class ColumnInfo:
     description: Optional[str]
 ```
 
-### TableDefinition
-```python
-@dataclass
-class TableDefinition:
-    name: str
-    columns: List[ColumnDefinition]
-    location: Optional[str]  # For external tables
-    format: str = "DELTA"  # Default to Delta format
-    
-@dataclass
-class ColumnDefinition:
-    name: str
-    data_type: str
-    nullable: bool = True
-    description: Optional[str] = None
-```
+
 
 ### QueryResult
 ```python

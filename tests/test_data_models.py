@@ -3,10 +3,10 @@
 import pytest
 from datetime import datetime
 from fabric_lakehouse_mcp.models.data_models import (
-    TableInfo, TableSchema, QueryResult, TableDefinition, ColumnDefinition,
+    TableInfo, TableSchema, QueryResult,
     MCPError, FabricError, ValidationError, ErrorType, QueryType, TableType,
     validate_table_name, validate_column_name, validate_data_type,
-    validate_table_definition, validate_sql_query
+    validate_sql_query
 )
 
 
@@ -126,46 +126,7 @@ class TestValidation:
             with pytest.raises(ValidationError):
                 validate_data_type(data_type)
     
-    def test_validate_table_definition_valid(self):
-        """Test valid table definition."""
-        table_def = TableDefinition(
-            name="test_table",
-            columns=[
-                ColumnDefinition("id", "BIGINT", False),
-                ColumnDefinition("name", "VARCHAR(100)", True),
-                ColumnDefinition("created_at", "DATETIME", True)
-            ],
-            schema_name="dbo"
-        )
-        validate_table_definition(table_def)  # Should not raise
-    
-    def test_validate_table_definition_invalid(self):
-        """Test invalid table definitions."""
-        # Empty columns
-        with pytest.raises(ValidationError) as exc_info:
-            table_def = TableDefinition(name="test", columns=[])
-            validate_table_definition(table_def)
-        assert "at least one column" in str(exc_info.value)
-        
-        # Duplicate column names
-        with pytest.raises(ValidationError) as exc_info:
-            table_def = TableDefinition(
-                name="test",
-                columns=[
-                    ColumnDefinition("id", "INT"),
-                    ColumnDefinition("ID", "VARCHAR(50)")  # Duplicate (case insensitive)
-                ]
-            )
-            validate_table_definition(table_def)
-        assert "Duplicate column name" in str(exc_info.value)
-        
-        # Invalid table name
-        with pytest.raises(ValidationError):
-            table_def = TableDefinition(
-                name="1invalid",
-                columns=[ColumnDefinition("id", "INT")]
-            )
-            validate_table_definition(table_def)
+
     
     def test_validate_sql_query_valid(self):
         """Test valid SQL queries."""
